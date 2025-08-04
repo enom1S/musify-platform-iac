@@ -1,0 +1,23 @@
+Installa gcloud cli su WSL: https://cloud.google.com/sdk/docs/install#deb
+
+autenticati con: gcloud auth application-default login (in questo modo puoi dare gli apply terraform per le risorse su GCP)
+
+BUTTALE QUI DENTRO (.tfvars)
+
+# Guida per collegarsi a GKE
+
+Una volta installato gcloud autentificarsi anche con "gcloud auth login" oltre che con "gcloud auth application-default login". È necessario avere anche kubectl e k9s per poter interagire con il cluster. 
+
+Dopo di che procedere per ottenere le credenziali a cui collegarsi.
+
+
+Comandi da fare una sola volta:
+
+- gcloud container clusters get-credentials weather-scanner-gke --region europe-west12 --project weatherscanner-466411
+
+# Imposta il cluster con tls-server-name e indirizzo del server, servirà per fare il redirect dei pacchetti kubectl verso il cluster remoto passando per un tunnel locale. 
+kubectl config set-cluster gke_weatherscanner-466411_europe-west12_weather-scanner-gke --server=https://127.0.0.1:8443 --tls-server-name=10.0.1.2
+
+Se li hai già fatti, allora apri un tunnel dal PC locale verso la compute machine di Google, questo serve per fare l'inoltro dei pacchetti in tunnel sicuri protetti da Google (IAP)
+
+gcloud compute ssh --zone "europe-west12-b" "gke-bastion-host" --tunnel-through-iap --project "weatherscanner-466411" -- -fNL 8443:10.0.1.2:443

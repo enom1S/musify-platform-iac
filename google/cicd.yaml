@@ -1,0 +1,70 @@
+name: CI/CD flow for test environment
+
+on:
+  push:
+    branches: ["feat/*"]
+
+env:
+  PROJECT: musify-platform  
+  REGION: "europe-west12"
+  # Image
+  IMAGE_NAME: "musify-platform-app"   
+  # GKE
+  CLUSTER_NAME: musify-platform-gke
+  CLUSTER_ZONE: europe-west12
+  BASTION_HOST: gke-bastion-host
+
+jobs:
+
+  ci-and-cd:
+    permissions:
+      contents: "read"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Google Auth
+        id: auth
+        uses: "google-github-actions/auth@v2"
+        with:
+          credentials_json: "${{ secrets.MUSIFY_IAC_SECRET }}" 
+
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+
+      # CI - Build
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./app
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # CD - Deploy
+
+      - id: "get-credentials"
+        uses: "google-github-actions/get-gke-credentials@v2"
+        with:
+          cluster_name: "${{ env.CLUSTER_NAME }}"
+          location: "${{ env.CLUSTER_ZONE }}"
+
+      - name: Configurazione cluster su KubeConfig
+        run: |
+          export PRIVATE_IP_GKE_CLUSTER=$(gcloud container clusters describe ${{ env.CLUSTER_NAME }} \
+            --project "${{ env.PROJECT }}" \
+            --zone ${{ env.CLUSTER_ZONE }} \
+            --format="get(privateClusterConfig.privateEndpoint)")
+
+          kubectl config set-cluster ${{ env.CLUSTER_NAME }} --server=https://127.0.0.1:8443
+          kubectl config set-cluster ${{ env.CLUSTER_NAME }} --tls-server-name=$PRIVATE_IP_GKE_CLUSTER
+
+          gcloud compute ssh --zone "${{ env.CLUSTER_ZONE }}" "${{ env.BASTION_HOST }}" --tunnel-through-iap --project "${{ env.PROJECT }}" -- -fNL 8443:$PRIVATE_IP_GKE_CLUSTER:443
+
+      - name: Deploy
+        run: |
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
+          sudo install skaffold /usr/local/bin/
+          skaffold deploy -p ${{ env.SKAFFOLD_ENVIRONMENT }} --images=app-image=${{ env.AR_URL }}/${{ env.IMAGE_NAME }}:$(git rev-parse --short HEAD),aws-image="${{ env.AWS_IMAGE }}"
