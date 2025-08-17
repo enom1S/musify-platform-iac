@@ -5,7 +5,7 @@ module "project-gcp" {
   project_reuse = {
     use_data_source = false
     project_attributes = {
-      name   = "musify-platform"    // da cambiare con nome progetto
+      name   = "musify-platform"   
       number = "853148429083"
     }
   }
@@ -144,7 +144,7 @@ module "firewall-gcp" {   // regole per fare comunicare cluster con le macchine 
 
 # Da buttare giù (commentare anche questo)
 # https://cloud.google.com/kubernetes-engine/docs/tutorials/private-cluster-bastion
-/* module "bastion-host-vm" {
+module "bastion-host-vm" {
   source     = "git::https://github.com/GoogleCloudPlatform/cloud-foundation-fabric//modules/compute-vm?ref=v40.0.0"
   project_id = module.project-gcp.project_id
   zone       = "europe-west12-b"
@@ -201,4 +201,4 @@ module "cluster-gke" {
   labels = {
     environment = "dev"
   }
-} */
+}   
