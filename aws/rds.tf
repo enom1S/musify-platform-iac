@@ -48,7 +48,11 @@ resource "aws_security_group" "rds" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = [module.vpc.vpc_cidr_block, "2.44.137.133/32"]  
+    cidr_blocks = [
+      module.vpc.vpc_cidr_block, 
+      "2.44.137.133/32",
+      "34.17.27.190/32"
+    ]  
   }
   
   egress {
